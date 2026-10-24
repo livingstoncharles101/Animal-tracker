@@ -1,0 +1,29 @@
+[project]
+name = "animal-tracker"
+version = "0.1.0"
+description = "Detect animals in Ring camera clips and email an alert."
+requires-python = ">=3.11"
+dependencies = [
+    "pillow>=10",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# Heavy model dependencies, kept optional so tests run without them.
+models = [
+    "megadetector==10.0.28",
+]
+dev = ["pytest>=8"]
+
+[project.scripts]
+animal-tracker = "animal_tracker.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["animal_tracker*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
