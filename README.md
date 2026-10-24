@@ -2,9 +2,20 @@
 
 Watches Ring camera clips for animals and emails an alert with a boxed snapshot.
 
-**Status:** step 1 and 2 of the plan. The detector and alert email work on clips you
-pass in by hand. The Ring connection (webhook and clip download) and the cloud
-deploy come next.
+**Status:** the detector and alert email work on clips you pass in by hand. The Ring
+connection and Cloud Run service are written and unit-tested but not yet deployed;
+the video download request body and webhook payload still need confirming against
+a real Ring account (see `animal_tracker/events.py`).
+
+## How it fits together
+
+1. Ring posts a signed `motion_detected` webhook to `/ring/webhook`.
+2. The service checks the `X-Signature` HMAC, drops Ring retries by `meta.request_id`,
+   and queues the event in Cloud Tasks so it can answer Ring within 5 seconds.
+3. Cloud Tasks calls `/tasks/clip`, which downloads the clip from Ring, checks it,
+   and emails if an animal is found.
+
+Ring tokens, seen event ids and the last alert time per camera live in Firestore.
 
 ## How it decides
 
@@ -16,7 +27,7 @@ deploy come next.
 4. Emails the frame with the highest score, with the animal boxed.
 
 People and vehicles never trigger an alert. Alerts are limited to one per camera
-every 10 minutes (`animal_tracker/cooldown.py`).
+every 10 minutes (`ALERT_COOLDOWN_SECONDS`).
 
 ## Try it on your own clips
 
@@ -51,6 +62,25 @@ docker build -t animal-tracker .
 docker run --rm -v "$PWD/clips:/clips" animal-tracker /clips/raccoon.mp4
 ```
 
+## Deploy to Google Cloud
+
+1. Create the secrets once. Values come from the Ring private app's key CSV, a
+   Gmail app password, and two random strings you make up:
+
+   ```sh
+   printf %s 'CLIENT_ID'  | gcloud secrets create ring-client-id --data-file=-
+   printf %s 'SECRET'     | gcloud secrets create ring-client-secret --data-file=-
+   printf %s 'HMAC_KEY'   | gcloud secrets create ring-hmac-key --data-file=-
+   printf %s 'APP_PASS'   | gcloud secrets create smtp-password --data-file=-
+   openssl rand -hex 16 | gcloud secrets create link-password --data-file=-
+   openssl rand -hex 32 | gcloud secrets create tasks-token --data-file=-
+   ```
+
+2. `PROJECT=your-project ALERT_EMAIL=you@gmail.com ./scripts/deploy.sh`
+3. Paste the three URLs it prints into the Ring developer portal, then use
+   **Connect Ring account** there. When the link page asks for a password, use the
+   `link-password` secret (`gcloud secrets versions access latest --secret=link-password`).
+
 ## Tests
 
 ```sh
@@ -58,4 +88,5 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The tests use a scripted detector, so they run without the model.
+The tests use a scripted detector and a fake Ring API, so they run without the
+model or any accounts.

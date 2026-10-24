@@ -4,7 +4,7 @@ from PIL import Image
 
 from animal_tracker.alert import build_alert
 from animal_tracker.analyze import Sighting
-from animal_tracker.cooldown import Cooldown
+from animal_tracker.store import MemoryStore, allow_alert
 from animal_tracker.detector import Detection
 from animal_tracker.frames import Frame
 
@@ -35,9 +35,9 @@ def test_alert_without_species():
 
 
 def test_cooldown_per_camera():
-    cd = Cooldown(timedelta(minutes=10))
+    store = MemoryStore()
     t = datetime(2026, 10, 24, 2, 0)
-    assert cd.allow("Front", t)
-    assert not cd.allow("Front", t + timedelta(minutes=5))
-    assert cd.allow("Back", t + timedelta(minutes=5))
-    assert cd.allow("Front", t + timedelta(minutes=10))
+    assert allow_alert(store, "front", t, 600)
+    assert not allow_alert(store, "front", t + timedelta(minutes=5), 600)
+    assert allow_alert(store, "back", t + timedelta(minutes=5), 600)
+    assert allow_alert(store, "front", t + timedelta(minutes=10), 600)
