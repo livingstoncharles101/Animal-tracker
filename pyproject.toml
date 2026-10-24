@@ -13,7 +13,14 @@ dependencies = [
 models = [
     "megadetector==10.0.28",
 ]
-dev = ["pytest>=8"]
+# The web service that runs on Cloud Run.
+cloud = [
+    "flask>=3",
+    "gunicorn>=22",
+    "google-cloud-firestore>=2.16",
+    "google-cloud-tasks>=2.16",
+]
+dev = ["pytest>=8", "flask>=3"]
 
 [project.scripts]
 animal-tracker = "animal_tracker.cli:main"

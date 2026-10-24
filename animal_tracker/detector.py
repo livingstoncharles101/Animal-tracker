@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -23,12 +24,14 @@ class Detector(Protocol):
 class MegaDetector:
     """Wraps Microsoft's MegaDetector, trained on camera-trap images.
 
-    Model weights download on first use and are cached by the megadetector package.
+    `model` is a known name ("MDV5A") or a path to weights. Named weights download on
+    first use; set MEGADETECTOR_MODEL to a baked-in path to skip that.
     """
 
     LABELS = {"1": "animal", "2": "person", "3": "vehicle"}
 
-    def __init__(self, model: str = "MDV5A", min_confidence: float = 0.05):
+    def __init__(self, model: str | None = None, min_confidence: float = 0.05):
+        model = model or os.environ.get("MEGADETECTOR_MODEL", "MDV5A")
         from megadetector.detection.run_detector import load_detector
 
         self._model = load_detector(model)
